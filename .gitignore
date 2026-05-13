@@ -1,0 +1,28 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# JetBrains / PyCharm
+.idea/
+
+# Streamlit cache
+.streamlit/secrets.toml
+
+# Test / coverage
+.coverage
+htmlcov/
+
+# Logs
+*.log
