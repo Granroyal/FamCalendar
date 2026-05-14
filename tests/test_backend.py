@@ -48,3 +48,27 @@ def test_create_and_delete_appointment(tmp_path, monkeypatch):
     main.delete_appointment(created.id)
 
     assert main.read_appointments() == []
+
+
+def test_create_appointment_from_llm_saves_parsed_appointment(tmp_path, monkeypatch):
+    data_file = tmp_path / "appointments.json"
+    data_file.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(main, "DATA_FILE", data_file)
+    monkeypatch.setattr(
+        main,
+        "parse_appointment_with_llm",
+        lambda message: main.AppointmentCreate(
+            dato=date(2026, 5, 22),
+            tid="10:00",
+            aftale=message,
+            kategori="Sundhed",
+        ),
+    )
+
+    created = main.create_appointment_from_llm(
+        main.LLMAppointmentRequest(besked="Tandlaege paa fredag kl. 10")
+    )
+
+    assert created.id == 1
+    assert created.aftale == "Tandlaege paa fredag kl. 10"
+    assert main.read_appointments()[0].kategori == "Sundhed"

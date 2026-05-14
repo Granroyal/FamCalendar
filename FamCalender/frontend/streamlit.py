@@ -73,6 +73,19 @@ def create_appointment(dato: date, tid: str, aftale: str, kategori: str) -> None
         pass
 
 
+def create_appointment_with_ai(message: str) -> None:
+    payload = {"besked": message}
+    request = Request(
+        f"{API_BASE_URL}/llm/appointments",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    with urlopen(request, timeout=20):
+        pass
+
+
 def delete_appointment(appointment_id: int) -> None:
     request = Request(
         f"{API_BASE_URL}/appointments/{appointment_id}",
@@ -117,6 +130,47 @@ def render_add_appointment_form(appointment_date: date) -> None:
 
         st.session_state["add_appointment_date"] = None
         st.session_state["last_saved_message"] = "Aftalen er gemt og vises i Dataframe."
+        change_page("Dataframe")
+        refresh_appointments()
+
+
+def render_ai_assistant() -> None:
+    st.header("AI-assistent")
+    st.write("Skriv en aftale med almindelig tekst, så opretter assistenten den i kalenderen.")
+
+    with st.form("ai_appointment_form", clear_on_submit=True):
+        message = st.text_area(
+            "Hvad skal oprettes?",
+            placeholder=(
+                "Fx: Tilføj tandlæge på fredag kl. 10\n"
+                "Fx: Opret fodboldtræning den 20. maj kl. 17"
+            ),
+            height=140,
+        )
+        submitted = st.form_submit_button("Opret med AI")
+
+    if submitted:
+        if not message.strip():
+            st.error("Skriv en besked til AI-assistenten først.")
+            return
+
+        try:
+            create_appointment_with_ai(message.strip())
+        except HTTPError as error:
+            try:
+                detail = json.loads(error.read().decode("utf-8")).get(
+                    "detail",
+                    str(error),
+                )
+            except json.JSONDecodeError:
+                detail = str(error)
+            st.error(f"AI-assistenten kunne ikke oprette aftalen: {detail}")
+            return
+        except URLError as error:
+            st.error(f"AI-assistenten kunne ikke kontakte backend'en: {error}")
+            return
+
+        st.session_state["last_saved_message"] = "AI-assistenten har oprettet aftalen."
         change_page("Dataframe")
         refresh_appointments()
 
@@ -231,12 +285,14 @@ if st.session_state.get("next_page"):
 
 page = st.sidebar.selectbox(
     "Navigation",
-    ["Kalender", "Dataframe", "Matplotlib chart"],
+    ["Kalender", "AI-assistent", "Dataframe", "Matplotlib chart"],
     key="page",
 )
 
 if page == "Kalender":
     render_calendar(appointments_df)
+elif page == "AI-assistent":
+    render_ai_assistant()
 elif page == "Dataframe":
     render_dataframe(appointments_df)
 else:
