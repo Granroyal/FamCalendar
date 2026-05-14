@@ -1,0 +1,51 @@
+[
+  {
+    "dato": "2026-01-05",
+    "tid": "10:00",
+    "aftale": "Tandlaege",
+    "kategori": "Sundhed",
+    "id": 1
+  },
+  {
+    "dato": "2026-01-12",
+    "tid": "17:00",
+    "aftale": "Familieaftale",
+    "kategori": "Familie",
+    "id": 2
+  },
+  {
+    "dato": "2026-02-03",
+    "tid": "09:00",
+    "aftale": "Skolemoede",
+    "kategori": "Skole",
+    "id": 3
+  },
+  {
+    "dato": "2026-03-08",
+    "tid": "14:30",
+    "aftale": "Foedselsdag",
+    "kategori": "Familie",
+    "id": 4
+  },
+  {
+    "dato": "2026-03-15",
+    "tid": "11:00",
+    "aftale": "Indkoeb",
+    "kategori": "Hverdag",
+    "id": 5
+  },
+  {
+    "dato": "2026-05-20",
+    "tid": "16:00",
+    "aftale": "Sport",
+    "kategori": "Fritid",
+    "id": 6
+  },
+  {
+    "dato": "2026-07-13",
+    "tid": "12:00",
+    "aftale": "F\u00f8dselsdag kl 13:37",
+    "kategori": "Familie",
+    "id": 7
+  }
+]
