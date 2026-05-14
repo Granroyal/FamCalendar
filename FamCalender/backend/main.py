@@ -31,6 +31,7 @@ WEEKDAYS_DA = [
 app = FastAPI(title="FamCalendar API")
 
 
+# Pydantic-modellerne validerer data, foer de bliver brugt eller gemt.
 class AppointmentCreate(BaseModel):
     dato: date
     tid: str = Field(min_length=5, max_length=5, pattern=r"^\d{2}:\d{2}$")
@@ -62,6 +63,7 @@ class NumpyAnalytics(BaseModel):
 
 
 def read_appointments() -> list[Appointment]:
+    # JSON-filen fungerer som et simpelt lokalt lager i stedet for en database.
     if not DATA_FILE.exists():
         return []
 
@@ -72,6 +74,7 @@ def read_appointments() -> list[Appointment]:
 
 
 def write_appointments(appointments: list[Appointment]) -> None:
+    # mode="json" laver date-objekter om til tekst, saa de kan gemmes i JSON.
     data = [
         appointment.model_dump(mode="json")
         for appointment in appointments
@@ -267,6 +270,7 @@ def read_root() -> dict[str, str]:
 
 @app.get("/appointments", response_model=list[Appointment])
 def get_appointments() -> list[Appointment]:
+    # Returnerer hele listen, som frontend'en bruger til kalender og dataframe.
     return read_appointments()
 
 
@@ -294,6 +298,7 @@ def get_numpy_analytics() -> NumpyAnalytics:
 )
 def create_appointment(new_appointment: AppointmentCreate) -> Appointment:
     appointments = read_appointments()
+    # ID'et beregnes ud fra eksisterende aftaler, saa det bliver unikt efter sletning.
     next_id = max((appointment.id for appointment in appointments), default=0) + 1
 
     appointment = Appointment(id=next_id, **new_appointment.model_dump())
@@ -309,6 +314,7 @@ def create_appointment(new_appointment: AppointmentCreate) -> Appointment:
     status_code=status.HTTP_201_CREATED,
 )
 def create_appointment_from_llm(request: LLMAppointmentRequest) -> Appointment:
+    # AI'en laver fri tekst om til samme struktur som en manuel oprettelse.
     new_appointment = parse_appointment_with_llm(request.besked)
     return create_appointment(new_appointment)
 
@@ -316,6 +322,7 @@ def create_appointment_from_llm(request: LLMAppointmentRequest) -> Appointment:
 @app.delete("/appointments/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_appointment(appointment_id: int) -> None:
     appointments = read_appointments()
+    # Beholder alle aftaler undtagen den, brugeren vil slette.
     remaining_appointments = [
         appointment
         for appointment in appointments

@@ -35,6 +35,7 @@ CATEGORIES = ["Familie", "Skole", "Sundhed", "Hverdag", "Fritid"]
 
 @st.cache_data(ttl=10)
 def load_appointments() -> pd.DataFrame:
+    # Cache mindsker antallet af kald til backend'en, mens appen genindlaeses.
     request = Request(f"{API_BASE_URL}/appointments")
 
     with urlopen(request, timeout=3) as response:
@@ -43,6 +44,7 @@ def load_appointments() -> pd.DataFrame:
     df = pd.DataFrame(appointments)
 
     if df.empty:
+        # Tom dataframe faar samme kolonner som en fyldt, saa resten af UI'et virker.
         empty_df = pd.DataFrame(
             columns=["id", "dato", "tid", "aftale", "kategori", "maaned", "ugedag"]
         )
@@ -56,6 +58,7 @@ def load_appointments() -> pd.DataFrame:
 
 
 def create_appointment(dato: date, tid: str, aftale: str, kategori: str) -> None:
+    # Sender formularens felter til FastAPI som JSON.
     payload = {
         "dato": dato.isoformat(),
         "tid": tid,
@@ -74,6 +77,7 @@ def create_appointment(dato: date, tid: str, aftale: str, kategori: str) -> None
 
 
 def create_appointment_with_ai(message: str) -> None:
+    # Sender brugerens fritekst til backend'en, hvor OpenAI kaldes.
     payload = {"besked": message}
     request = Request(
         f"{API_BASE_URL}/llm/appointments",
@@ -113,6 +117,7 @@ def refresh_appointments() -> None:
 
 
 def change_page(page_name: str) -> None:
+    # Streamlit kan ikke skifte selectbox direkte midt i et render, saa vi gemmer naeste side.
     st.session_state["next_page"] = page_name
 
 
@@ -141,6 +146,7 @@ def render_add_appointment_form(appointment_date: date) -> None:
 
         st.session_state["add_appointment_date"] = None
         st.session_state["last_saved_message"] = "Aftalen er gemt og vises i Dataframe."
+        # Efter gemning sendes brugeren til dataframe-siden, hvor den nye aftale ses.
         change_page("Dataframe")
         refresh_appointments()
 
@@ -249,6 +255,7 @@ def render_dataframe(df: pd.DataFrame) -> None:
     if st.button("Opdater dataframe"):
         refresh_appointments()
 
+    # Pandas dataframe bruges til at vise de raadata, som backend'en har gemt.
     st.dataframe(
         df.sort_values("dato"),
         width="stretch",
@@ -331,6 +338,7 @@ except URLError:
     st.stop()
 
 if st.session_state.get("next_page"):
+    # next_page bliver sat efter oprettelse, saa navigationen foelger handlingen.
     st.session_state["page"] = st.session_state.pop("next_page")
 
 page = st.sidebar.selectbox(
