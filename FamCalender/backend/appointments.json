@@ -47,5 +47,12 @@
     "aftale": "F\u00f8dselsdag kl 13:37",
     "kategori": "Familie",
     "id": 7
+  },
+  {
+    "dato": "2026-04-19",
+    "tid": "19:00",
+    "aftale": "Spise ude",
+    "kategori": "Hverdag",
+    "id": 8
   }
 ]
