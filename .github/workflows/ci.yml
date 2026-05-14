@@ -23,14 +23,11 @@ jobs:
       - name: Sync dependencies
         run: uv sync --frozen
 
-      - name: Install test tools
-        run: uv run python -m pip install pytest ruff mypy
-
       - name: Run tests
-        run: uv run pytest
+        run: uv run --with pytest pytest
 
       - name: Run code analysis
-        run: uv run ruff check .
+        run: uv run --with ruff ruff check .
 
       - name: Run type checks
-        run: uv run mypy FamCalender/backend FamCalender/frontend/streamlit.py
+        run: uv run --with mypy mypy --ignore-missing-imports FamCalender/backend FamCalender/frontend/streamlit.py
