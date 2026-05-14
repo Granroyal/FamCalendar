@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, ValidationError
 
 
+# Laeser variabler fra .env, saa API-noeglen ikke skal ligge direkte i koden.
 load_dotenv()
 
 DATA_FILE = Path(__file__).with_name("appointments.json")
@@ -56,6 +57,7 @@ def write_appointments(appointments: list[Appointment]) -> None:
 
 
 def extract_openai_text(response_data: dict) -> str:
+    # OpenAI kan returnere teksten i output_text eller i output-listen.
     output_text = response_data.get("output_text")
     if isinstance(output_text, str) and output_text.strip():
         return output_text
@@ -73,6 +75,7 @@ def extract_openai_text(response_data: dict) -> str:
 
 
 def parse_appointment_with_llm(message: str) -> AppointmentCreate:
+    # Henter API-noeglen fra .env eller terminalens miljoevariabler.
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(
@@ -81,6 +84,8 @@ def parse_appointment_with_llm(message: str) -> AppointmentCreate:
         )
 
     today = date.today().isoformat()
+
+    # JSON-schemaet tvinger OpenAI til at svare med de felter kalenderen skal bruge.
     schema = {
         "type": "object",
         "additionalProperties": False,
@@ -107,6 +112,7 @@ def parse_appointment_with_llm(message: str) -> AppointmentCreate:
     }
     payload = {
         "model": OPENAI_MODEL,
+        # Instructions forklarer modellen dens rolle og hvordan relative datoer skal tolkes.
         "instructions": (
             "Du er en dansk kalenderassistent. Udtraek en kalenderaftale fra "
             "brugerens besked. Brug dagens dato til relative datoer. Hvis "
@@ -129,6 +135,7 @@ def parse_appointment_with_llm(message: str) -> AppointmentCreate:
         OPENAI_RESPONSES_URL,
         data=json.dumps(payload).encode("utf-8"),
         headers={
+            # Bearer-token er den maade OpenAI API'et modtager API-noeglen paa.
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
@@ -136,6 +143,7 @@ def parse_appointment_with_llm(message: str) -> AppointmentCreate:
     )
 
     try:
+        # Sender beskeden til OpenAI og laeser svaret som JSON.
         with urlopen(request, timeout=15) as response:
             response_data = json.load(response)
     except HTTPError as error:
@@ -155,6 +163,7 @@ def parse_appointment_with_llm(message: str) -> AppointmentCreate:
         ) from error
 
     try:
+        # OpenAI-teksten er selv JSON, saa den parses til en Python-dict.
         parsed_data = json.loads(extract_openai_text(response_data))
     except json.JSONDecodeError as error:
         raise HTTPException(
@@ -163,6 +172,7 @@ def parse_appointment_with_llm(message: str) -> AppointmentCreate:
         ) from error
 
     try:
+        # Validerer at AI-svaret passer til AppointmentCreate, foer aftalen gemmes.
         return AppointmentCreate.model_validate(parsed_data)
     except ValidationError as error:
         raise HTTPException(
