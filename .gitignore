@@ -4,9 +4,15 @@
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Environment variables
 .env
+.env.*
 
 # macOS
 .DS_Store
@@ -23,6 +29,7 @@ __pycache__/
 # Test / coverage
 .coverage
 htmlcov/
+coverage.xml
 
 # Logs
 *.log
