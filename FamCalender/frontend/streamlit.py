@@ -86,6 +86,15 @@ def create_appointment_with_ai(message: str) -> None:
         pass
 
 
+@st.cache_data(ttl=10)
+def load_numpy_analysis() -> dict:
+    # Henter de faerdige NumPy-resultater fra backend'en.
+    request = Request(f"{API_BASE_URL}/analytics/numpy")
+
+    with urlopen(request, timeout=3) as response:
+        return json.load(response)
+
+
 def delete_appointment(appointment_id: int) -> None:
     request = Request(
         f"{API_BASE_URL}/appointments/{appointment_id}",
@@ -97,7 +106,9 @@ def delete_appointment(appointment_id: int) -> None:
 
 
 def refresh_appointments() -> None:
+    # Rydder cache, saa nye eller slettede aftaler ogsaa slaar igennem i analysen.
     load_appointments.clear()
+    load_numpy_analysis.clear()
     st.rerun()
 
 
@@ -269,6 +280,45 @@ def render_chart(df: pd.DataFrame) -> None:
     st.pyplot(fig)
 
 
+def render_count_results(title: str, results: list[dict]) -> None:
+    # Viser en lille liste med de mest brugte tider, dage eller datoer.
+    st.subheader(title)
+
+    if not results:
+        st.write("Ingen data endnu.")
+        return
+
+    for result in results:
+        st.write(f"{result['label']}: {result['count']} aftaler")
+
+
+def render_numpy_analysis() -> None:
+    st.header("AI + NumPy analyse")
+
+    try:
+        # Frontend'en beregner ikke selv her; den viser svaret fra backend'en.
+        analysis = load_numpy_analysis()
+    except (HTTPError, URLError) as error:
+        st.error(f"NumPy-analysen kunne ikke hentes: {error}")
+        return
+
+    if analysis["total_appointments"] == 0:
+        st.info("Der er ingen aftaler at analysere endnu.")
+        return
+
+    st.metric("Aftaler analyseret", analysis["total_appointments"])
+
+    # Deler resultaterne i to kolonner, saa overblikket er lettere at laese.
+    col1, col2 = st.columns(2)
+    with col1:
+        render_count_results("Tidspunkter der bruges mest", analysis["most_used_times"])
+        render_count_results("Mest aktive ugedage", analysis["most_active_weekdays"])
+
+    with col2:
+        render_count_results("Mest fyldte datoer", analysis["busiest_dates"])
+        render_count_results("Mest aktive timer", analysis["most_active_hours"])
+
+
 st.title("FamCalendar")
 
 try:
@@ -285,7 +335,7 @@ if st.session_state.get("next_page"):
 
 page = st.sidebar.selectbox(
     "Navigation",
-    ["Kalender", "AI-assistent", "Dataframe", "Matplotlib chart"],
+    ["Kalender", "AI-assistent", "Dataframe", "Matplotlib chart", "NumPy analyse"],
     key="page",
 )
 
@@ -295,5 +345,7 @@ elif page == "AI-assistent":
     render_ai_assistant()
 elif page == "Dataframe":
     render_dataframe(appointments_df)
-else:
+elif page == "Matplotlib chart":
     render_chart(appointments_df)
+else:
+    render_numpy_analysis()

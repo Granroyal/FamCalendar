@@ -72,3 +72,43 @@ def test_create_appointment_from_llm_saves_parsed_appointment(tmp_path, monkeypa
     assert created.id == 1
     assert created.aftale == "Tandlaege paa fredag kl. 10"
     assert main.read_appointments()[0].kategori == "Sundhed"
+
+
+def test_analyze_appointments_with_numpy_finds_patterns():
+    appointments = [
+        main.Appointment(
+            id=1,
+            dato=date(2026, 5, 18),
+            tid="10:00",
+            aftale="Skole",
+            kategori="Skole",
+        ),
+        main.Appointment(
+            id=2,
+            dato=date(2026, 5, 18),
+            tid="10:00",
+            aftale="Tandlaege",
+            kategori="Sundhed",
+        ),
+        main.Appointment(
+            id=3,
+            dato=date(2026, 5, 19),
+            tid="15:30",
+            aftale="Sport",
+            kategori="Fritid",
+        ),
+    ]
+
+    analysis = main.analyze_appointments_with_numpy(appointments)
+
+    assert analysis.total_appointments == 3
+    assert analysis.most_used_times == [main.CountResult(label="10:00", count=2)]
+    assert analysis.busiest_dates == [
+        main.CountResult(label="2026-05-18", count=2)
+    ]
+    assert analysis.most_active_weekdays == [
+        main.CountResult(label="Mandag", count=2)
+    ]
+    assert analysis.most_active_hours == [
+        main.CountResult(label="10:00-10:59", count=2)
+    ]

@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+import numpy as np
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, ValidationError
@@ -17,6 +18,15 @@ DATA_FILE = Path(__file__).with_name("appointments.json")
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 OPENAI_MODEL = os.environ.get("FAMCALENDAR_OPENAI_MODEL", "gpt-5.4-nano")
 CATEGORIES = ["Familie", "Skole", "Sundhed", "Hverdag", "Fritid"]
+WEEKDAYS_DA = [
+    "Mandag",
+    "Tirsdag",
+    "Onsdag",
+    "Torsdag",
+    "Fredag",
+    "Loerdag",
+    "Soendag",
+]
 
 app = FastAPI(title="FamCalendar API")
 
@@ -34,6 +44,21 @@ class Appointment(AppointmentCreate):
 
 class LLMAppointmentRequest(BaseModel):
     besked: str = Field(min_length=3, max_length=500)
+
+
+# Bruges til et enkelt analyseresultat, fx "Mandag: 3 aftaler".
+class CountResult(BaseModel):
+    label: str
+    count: int
+
+
+# Samler alle NumPy-resultaterne i et fast response-format til frontend'en.
+class NumpyAnalytics(BaseModel):
+    total_appointments: int
+    most_used_times: list[CountResult]
+    busiest_dates: list[CountResult]
+    most_active_weekdays: list[CountResult]
+    most_active_hours: list[CountResult]
 
 
 def read_appointments() -> list[Appointment]:
@@ -54,6 +79,60 @@ def write_appointments(appointments: list[Appointment]) -> None:
 
     with DATA_FILE.open("w", encoding="utf-8") as file:
         json.dump(data, file, indent=2, ensure_ascii=True)
+
+
+def count_max_values(labels: np.ndarray) -> list[CountResult]:
+    # Finder den eller de vaerdier, der forekommer flest gange i et NumPy-array.
+    if labels.size == 0:
+        return []
+
+    # np.unique taeller hvor mange gange hvert tidspunkt, dato eller ugedag findes.
+    unique_labels, counts = np.unique(labels, return_counts=True)
+    max_count = int(np.max(counts))
+    winners = unique_labels[counts == max_count]
+
+    return [
+        CountResult(label=str(label), count=max_count)
+        for label in sorted(winners.tolist())
+    ]
+
+
+def analyze_appointments_with_numpy(
+    appointments: list[Appointment],
+) -> NumpyAnalytics:
+    # Returnerer tomme lister, hvis der endnu ikke er aftaler at analysere.
+    if not appointments:
+        return NumpyAnalytics(
+            total_appointments=0,
+            most_used_times=[],
+            busiest_dates=[],
+            most_active_weekdays=[],
+            most_active_hours=[],
+        )
+
+    # Laver aftalernes felter om til NumPy-arrays, saa de kan analyseres samlet.
+    times = np.array([appointment.tid for appointment in appointments])
+    dates = np.array([appointment.dato.isoformat() for appointment in appointments])
+    weekday_indexes = np.array(
+        [appointment.dato.weekday() for appointment in appointments]
+    )
+    weekdays = np.array([WEEKDAYS_DA[index] for index in weekday_indexes])
+    # Grupperer tider i hele timer, saa vi kan se hvor brugeren er mest aktiv.
+    hours = np.array(
+        [
+            f"{int(appointment.tid[:2]):02d}:00-{int(appointment.tid[:2]):02d}:59"
+            for appointment in appointments
+        ]
+    )
+
+    # Hver kategori sendes gennem samme taellefunktion og pakkes som JSON-svar.
+    return NumpyAnalytics(
+        total_appointments=len(appointments),
+        most_used_times=count_max_values(times),
+        busiest_dates=count_max_values(dates),
+        most_active_weekdays=count_max_values(weekdays),
+        most_active_hours=count_max_values(hours),
+    )
 
 
 def extract_openai_text(response_data: dict) -> str:
@@ -199,6 +278,13 @@ def get_appointments_by_date(appointment_date: date) -> list[Appointment]:
         for appointment in appointments
         if appointment.dato == appointment_date
     ]
+
+
+@app.get("/analytics/numpy", response_model=NumpyAnalytics)
+def get_numpy_analytics() -> NumpyAnalytics:
+    # Endpointet bruges af frontend'en til at hente de beregnede kalender-moenstre.
+    appointments = read_appointments()
+    return analyze_appointments_with_numpy(appointments)
 
 
 @app.post(
