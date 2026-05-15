@@ -73,9 +73,21 @@ Testene kan køres med:
 make test
 ```
 
+Type checks og code analysis kan køres med:
+
+```bash
+make typecheck
+make lint
+```
+
+Alle checks kan køres samlet med:
+
+```bash
+make check
+```
+
 ## Mangler eller kan tilføjes
 
 - Redigering af eksisterende aftaler er ikke lavet endnu.
 - Docker Compose er ikke tilføjet endnu.
-- Type checks og code analysis kan tilføjes senere.
 - Kalenderen bruger året 2026.

@@ -12,3 +12,12 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "streamlit>=1.57.0",
 ]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F"]
+
+[tool.mypy]
+ignore_missing_imports = true
