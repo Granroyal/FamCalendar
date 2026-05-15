@@ -14,7 +14,12 @@ from pydantic import BaseModel, Field, ValidationError
 # Laeser variabler fra .env, saa API-noeglen ikke skal ligge direkte i koden.
 load_dotenv()
 
-DATA_FILE = Path(__file__).with_name("appointments.json")
+DATA_FILE = Path(
+    os.environ.get(
+        "FAMCALENDAR_DATA_FILE",
+        Path(__file__).with_name("appointments.json"),
+    )
+)
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 OPENAI_MODEL = os.environ.get("FAMCALENDAR_OPENAI_MODEL", "gpt-5.4-nano")
 CATEGORIES = ["Familie", "Skole", "Sundhed", "Hverdag", "Fritid"]
@@ -80,6 +85,7 @@ def write_appointments(appointments: list[Appointment]) -> None:
         for appointment in appointments
     ]
 
+    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     with DATA_FILE.open("w", encoding="utf-8") as file:
         json.dump(data, file, indent=2, ensure_ascii=True)
 

@@ -59,6 +59,41 @@ uv run uvicorn FamCalender.backend.main:app --reload --port 8000
 uv run streamlit run FamCalender/frontend/streamlit.py
 ```
 
+## Start med Docker Compose
+
+Hele applikationen kan også køres samlet med Docker Compose. Sørg først for at `.env` findes i
+projektets rodmappe:
+
+```env
+OPENAI_API_KEY=din-api-noegle
+FAMCALENDAR_OPENAI_MODEL=gpt-5.4-nano
+```
+
+Start derefter både backend og frontend med:
+
+```bash
+docker compose up --build
+```
+
+Frontend kan åbnes på:
+
+```text
+http://localhost:8501
+```
+
+Backend kører på:
+
+```text
+http://localhost:8000
+```
+
+Docker Compose gemmer aftaler i en Docker-volume, så `appointments.json` bevares mellem genstarter.
+Stop services igen med:
+
+```bash
+docker compose down
+```
+
 Eksempel på besked i AI-assistenten:
 
 ```text
@@ -85,9 +120,3 @@ Alle checks kan køres samlet med:
 ```bash
 make check
 ```
-
-## Mangler eller kan tilføjes
-
-- Redigering af eksisterende aftaler er ikke lavet endnu.
-- Docker Compose er ikke tilføjet endnu.
-- Kalenderen bruger året 2026.

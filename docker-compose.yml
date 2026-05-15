@@ -1,0 +1,48 @@
+services:
+  backend:
+    build: .
+    env_file:
+      - .env
+    environment:
+      FAMCALENDAR_DATA_FILE: /data/appointments.json
+    command:
+      - uvicorn
+      - FamCalender.backend.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - famcalendar-data:/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from urllib.request import urlopen; urlopen('http://localhost:8000/', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build: .
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      FAMCALENDAR_API_URL: http://backend:8000
+    command:
+      - streamlit
+      - run
+      - FamCalender/frontend/streamlit.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --server.headless=true
+    ports:
+      - "8501:8501"
+
+volumes:
+  famcalendar-data:
