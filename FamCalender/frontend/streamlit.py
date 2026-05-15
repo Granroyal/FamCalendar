@@ -29,6 +29,16 @@ MONTHS_DA = {
     12: "December",
 }
 
+WEEKDAYS_DA = {
+    0: "Mandag",
+    1: "Tirsdag",
+    2: "Onsdag",
+    3: "Torsdag",
+    4: "Fredag",
+    5: "Lørdag",
+    6: "Søndag",
+}
+
 API_BASE_URL = os.environ.get("FAMCALENDAR_API_URL", "http://localhost:8000")
 CATEGORIES = ["Familie", "Skole", "Sundhed", "Hverdag", "Fritid"]
 
@@ -44,16 +54,16 @@ def load_appointments() -> pd.DataFrame:
     df = pd.DataFrame(appointments)
 
     if df.empty:
-        # Tom dataframe faar samme kolonner som en fyldt, saa resten af UI'et virker.
+        # Tom dataframe får samme kolonner som en fyldt, så resten af UI'et virker.
         empty_df = pd.DataFrame(
-            columns=["id", "dato", "tid", "aftale", "kategori", "maaned", "ugedag"]
+            columns=["id", "dato", "tid", "aftale", "kategori", "måned", "ugedag"]
         )
         empty_df["dato"] = pd.to_datetime(empty_df["dato"])
         return empty_df
 
     df["dato"] = pd.to_datetime(df["dato"])
-    df["maaned"] = df["dato"].dt.month.map(MONTHS_DA)
-    df["ugedag"] = df["dato"].dt.day_name()
+    df["måned"] = df["dato"].dt.month.map(MONTHS_DA)
+    df["ugedag"] = df["dato"].dt.weekday.map(WEEKDAYS_DA)
     return df
 
 
@@ -70,6 +80,30 @@ def create_appointment(dato: date, tid: str, aftale: str, kategori: str) -> None
         data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
+    )
+
+    with urlopen(request, timeout=3):
+        pass
+
+
+def update_appointment(
+    appointment_id: int,
+    dato: date,
+    tid: str,
+    aftale: str,
+    kategori: str,
+) -> None:
+    payload = {
+        "dato": dato.isoformat(),
+        "tid": tid,
+        "aftale": aftale,
+        "kategori": kategori,
+    }
+    request = Request(
+        f"{API_BASE_URL}/appointments/{appointment_id}",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="PUT",
     )
 
     with urlopen(request, timeout=3):
@@ -151,6 +185,55 @@ def render_add_appointment_form(appointment_date: date) -> None:
         refresh_appointments()
 
 
+def render_edit_appointment_form(appointment: pd.Series) -> None:
+    appointment_id = int(appointment.id)
+
+    with st.form(f"edit_appointment_form_{appointment_id}"):
+        appointment_date = st.date_input("Dato", value=appointment.dato.date())
+        appointment_time = st.time_input(
+            "Tid",
+            value=time.fromisoformat(appointment.tid),
+        )
+        title = st.text_input("Aftale", value=appointment.aftale)
+        category = st.selectbox(
+            "Kategori",
+            CATEGORIES,
+            index=CATEGORIES.index(appointment.kategori)
+            if appointment.kategori in CATEGORIES
+            else 0,
+        )
+        save_button, cancel_button = st.columns(2)
+        with save_button:
+            submitted = st.form_submit_button("Gem ændringer")
+        with cancel_button:
+            cancelled = st.form_submit_button("Annuller")
+
+    if cancelled:
+        st.session_state["edit_appointment_id"] = None
+        st.rerun()
+
+    if submitted:
+        if not title.strip():
+            st.error("Skriv en aftale før du gemmer.")
+            return
+
+        try:
+            update_appointment(
+                appointment_id=appointment_id,
+                dato=appointment_date,
+                tid=appointment_time.strftime("%H:%M"),
+                aftale=title.strip(),
+                kategori=category,
+            )
+        except (HTTPError, URLError) as error:
+            st.error(f"Aftalen kunne ikke opdateres: {error}")
+            return
+
+        st.session_state["edit_appointment_id"] = None
+        st.session_state["last_saved_message"] = "Aftalen er opdateret."
+        refresh_appointments()
+
+
 def render_ai_assistant() -> None:
     st.header("AI-assistent")
     st.write("Skriv en aftale med almindelig tekst, så opretter assistenten den i kalenderen.")
@@ -158,11 +241,8 @@ def render_ai_assistant() -> None:
     with st.form("ai_appointment_form", clear_on_submit=True):
         message = st.text_area(
             "Hvad skal oprettes?",
-            placeholder=(
-                "Fx: Tilføj tandlæge på fredag kl. 10\n"
-                "Fx: Opret fodboldtræning den 20. maj kl. 17"
-            ),
-            height=140,
+            placeholder="Fx: Tandlæge på fredag kl. 10",
+            height=100,
         )
         submitted = st.form_submit_button("Opret med AI")
 
@@ -187,7 +267,9 @@ def render_ai_assistant() -> None:
             st.error(f"AI-assistenten kunne ikke kontakte backend'en: {error}")
             return
 
-        st.session_state["last_saved_message"] = "AI-assistenten har oprettet aftalen."
+        st.session_state["last_saved_message"] = (
+            "Aftalen er oprettet med AI og ligger nu i kalenderen."
+        )
         change_page("Dataframe")
         refresh_appointments()
 
@@ -207,25 +289,31 @@ def render_calendar(df: pd.DataFrame) -> None:
 
     days_in_month = calendar.monthrange(YEAR, selected_month)[1]
     add_appointment_date = st.session_state.get("add_appointment_date")
+    edit_appointment_id = st.session_state.get("edit_appointment_id")
 
     for day in range(1, days_in_month + 1):
         current_date = date(YEAR, selected_month, day)
         day_appointments = month_df[month_df["dato"].dt.date == current_date]
 
         with st.container(border=True):
-            st.subheader(current_date.strftime("%d/%m/%Y"))
+            weekday_name = WEEKDAYS_DA[current_date.weekday()]
+            st.subheader(f"{weekday_name} den {day}. {selected_month_name.lower()}")
+            st.caption(current_date.strftime("%d/%m/%Y"))
 
             if day_appointments.empty:
                 st.write("Ingen aftaler")
             else:
-                for appointment in day_appointments.itertuples():
-                    details, delete_button = st.columns([5, 1])
+                for appointment in day_appointments.sort_values("tid").itertuples():
+                    details, edit_button, delete_button = st.columns([5, 1, 1])
 
                     with details:
-                        st.write(
-                            f"{appointment.tid} - {appointment.aftale} "
-                            f"({appointment.kategori})"
-                        )
+                        st.markdown(f"**{appointment.tid}** · {appointment.aftale}")
+                        st.caption(appointment.kategori)
+
+                    with edit_button:
+                        if st.button("Rediger", key=f"edit_{appointment.id}"):
+                            st.session_state["edit_appointment_id"] = int(appointment.id)
+                            st.rerun()
 
                     with delete_button:
                         if st.button("Slet", key=f"delete_{appointment.id}"):
@@ -237,6 +325,9 @@ def render_calendar(df: pd.DataFrame) -> None:
 
                             st.success("Aftalen er slettet.")
                             refresh_appointments()
+
+                    if edit_appointment_id == int(appointment.id):
+                        render_edit_appointment_form(appointment)
 
             if st.button("Tilføj aftale", key=f"add_{current_date.isoformat()}"):
                 st.session_state["add_appointment_date"] = current_date.isoformat()
@@ -263,28 +354,58 @@ def render_dataframe(df: pd.DataFrame) -> None:
     )
 
 
+def render_bar_chart(
+    labels: pd.Index,
+    values: pd.Series,
+    xlabel: str,
+    title: str,
+) -> None:
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.bar(labels, values, color="#2E86AB")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Antal aftaler")
+    ax.set_title(title)
+    ax.tick_params(axis="x", rotation=45)
+    fig.tight_layout()
+
+    st.pyplot(fig)
+
+
 def render_chart(df: pd.DataFrame) -> None:
-    st.header("Travleste maaneder")
+    st.header("Matplotlib chart")
 
     if df.empty:
         st.info("Der er ingen aftaler at vise endnu.")
         return
 
+    weekday_tab, month_tab = st.tabs(["Ugedage", "Måneder"])
+
+    appointments_per_weekday = (
+        df.groupby("ugedag")
+        .size()
+        .reindex(WEEKDAYS_DA.values(), fill_value=0)
+    )
     appointments_per_month = (
-        df.groupby("maaned")
+        df.groupby("måned")
         .size()
         .reindex(MONTHS_DA.values(), fill_value=0)
     )
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.bar(appointments_per_month.index, appointments_per_month.values, color="#2E86AB")
-    ax.set_xlabel("Maaned")
-    ax.set_ylabel("Antal aftaler")
-    ax.set_title("Antal aftaler pr. maaned")
-    ax.tick_params(axis="x", rotation=45)
-    fig.tight_layout()
+    with weekday_tab:
+        render_bar_chart(
+            labels=appointments_per_weekday.index,
+            values=appointments_per_weekday,
+            xlabel="Ugedag",
+            title="Antal aftaler pr. ugedag",
+        )
 
-    st.pyplot(fig)
+    with month_tab:
+        render_bar_chart(
+            labels=appointments_per_month.index,
+            values=appointments_per_month,
+            xlabel="Måned",
+            title="Antal aftaler pr. måned",
+        )
 
 
 def render_count_results(title: str, results: list[dict]) -> None:

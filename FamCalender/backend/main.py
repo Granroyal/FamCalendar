@@ -29,8 +29,8 @@ WEEKDAYS_DA = [
     "Onsdag",
     "Torsdag",
     "Fredag",
-    "Loerdag",
-    "Soendag",
+    "Lørdag",
+    "Søndag",
 ]
 
 app = FastAPI(title="FamCalendar API")
@@ -312,6 +312,29 @@ def create_appointment(new_appointment: AppointmentCreate) -> Appointment:
     write_appointments(appointments)
 
     return appointment
+
+
+@app.put("/appointments/{appointment_id}", response_model=Appointment)
+def update_appointment(
+    appointment_id: int,
+    updated_appointment: AppointmentCreate,
+) -> Appointment:
+    appointments = read_appointments()
+
+    for index, appointment in enumerate(appointments):
+        if appointment.id == appointment_id:
+            saved_appointment = Appointment(
+                id=appointment.id,
+                **updated_appointment.model_dump(),
+            )
+            appointments[index] = saved_appointment
+            write_appointments(appointments)
+            return saved_appointment
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Aftalen findes ikke",
+    )
 
 
 @app.post(

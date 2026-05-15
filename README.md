@@ -4,7 +4,7 @@ Eksamen i Introduktion til Python.
 
 ## Beskrivelse af programmet
 
-Programmet er en webbaseret kalenderapplikation, hvor brugeren kan oprette, se og slette aftaler.
+Programmet er en webbaseret kalenderapplikation, hvor brugeren kan oprette, se, redigere og slette aftaler.
 Brugeren får et simpelt overblik over sine aftaler i en kalender og kan også se aftalerne som en
 Pandas dataframe.
 
@@ -13,8 +13,8 @@ sprog, fx "Tilføj tandlæge på fredag kl. 10". Backend'en bruger OpenAI til at
 udtrække dato, tidspunkt, aftaletekst og kategori. Derefter bliver aftalen gemt i kalenderen.
 
 Programmet analyserer også aftalerne med NumPy og viser simple mønstre, fx hvilke tidspunkter,
-datoer og ugedage der bruges mest. Der er også et Matplotlib-diagram, som viser antal aftaler pr.
-måned.
+datoer og ugedage der bruges mest. Der er også Matplotlib-diagrammer, som viser antal aftaler pr.
+ugedag og måned.
 
 ## Applikationens teknologier
 
