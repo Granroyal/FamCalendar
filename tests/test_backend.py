@@ -50,6 +50,39 @@ def test_create_and_delete_appointment(tmp_path, monkeypatch):
     assert main.read_appointments() == []
 
 
+def test_update_appointment_changes_existing_appointment(tmp_path, monkeypatch):
+    data_file = tmp_path / "appointments.json"
+    data_file.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(main, "DATA_FILE", data_file)
+
+    created = main.create_appointment(
+        main.AppointmentCreate(
+            dato=date(2026, 7, 13),
+            tid="12:00",
+            aftale="Fødselsdag",
+            kategori="Familie",
+        )
+    )
+
+    updated = main.update_appointment(
+        created.id,
+        main.AppointmentCreate(
+            dato=date(2026, 7, 14),
+            tid="18:30",
+            aftale="Familiefødselsdag",
+            kategori="Fritid",
+        ),
+    )
+
+    saved_appointment = main.read_appointments()[0]
+
+    assert updated.id == created.id
+    assert saved_appointment.dato == date(2026, 7, 14)
+    assert saved_appointment.tid == "18:30"
+    assert saved_appointment.aftale == "Familiefødselsdag"
+    assert saved_appointment.kategori == "Fritid"
+
+
 def test_create_appointment_from_llm_saves_parsed_appointment(tmp_path, monkeypatch):
     data_file = tmp_path / "appointments.json"
     data_file.write_text("[]", encoding="utf-8")
