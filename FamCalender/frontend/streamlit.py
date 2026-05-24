@@ -24,8 +24,7 @@ try:
     appointments_df = load_appointments()
 except URLError:
     st.error(
-        "Backend'en kører ikke endnu. Start den med: "
-        "`uv run uvicorn FamCalender.backend.main:app --reload --port 8000`"
+        "Backend'en kører ikke endnu. Start applikationen med: `make up`"
     )
     st.stop()
 

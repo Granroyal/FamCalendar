@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, ValidationError
 
+from FamCalender.constants import CATEGORIES, WEEKDAYS_DA
+
 
 # Laeser variabler fra .env, saa API-noeglen ikke skal ligge direkte i koden.
 load_dotenv()
@@ -22,16 +24,6 @@ DATA_FILE = Path(
 )
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 OPENAI_MODEL = os.environ.get("FAMCALENDAR_OPENAI_MODEL", "gpt-5.4-nano")
-CATEGORIES = ["Familie", "Skole", "Sundhed", "Hverdag", "Fritid"]
-WEEKDAYS_DA = [
-    "Mandag",
-    "Tirsdag",
-    "Onsdag",
-    "Torsdag",
-    "Fredag",
-    "Lørdag",
-    "Søndag",
-]
 
 app = FastAPI(title="FamCalendar API")
 
@@ -321,6 +313,7 @@ def update_appointment(
 ) -> Appointment:
     appointments = read_appointments()
 
+    # Finder aftalen med samme id og erstatter dens indhold med de nye data.
     for index, appointment in enumerate(appointments):
         if appointment.id == appointment_id:
             saved_appointment = Appointment(

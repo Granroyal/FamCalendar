@@ -12,6 +12,29 @@ from FamCalender.frontend.constants import (
 )
 
 
+def appointment_payload(dato: date, tid: str, aftale: str, kategori: str) -> dict[str, str]:
+    # Samler felterne i det JSON-format, som backend'ens AppointmentCreate forventer.
+    return {
+        "dato": dato.isoformat(),
+        "tid": tid,
+        "aftale": aftale,
+        "kategori": kategori,
+    }
+
+
+def send_json(path: str, payload: dict, method: str, timeout: int = 3) -> None:
+    # Genbruges af POST og PUT-kald, så request-koden ikke gentages flere steder.
+    request = Request(
+        f"{API_BASE_URL}{path}",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method=method,
+    )
+
+    with urlopen(request, timeout=timeout):
+        pass
+
+
 @st.cache_data(ttl=10)
 def load_appointments() -> pd.DataFrame:
     # Cache mindsker antallet af kald til backend'en, mens appen genindlæses.
@@ -38,21 +61,7 @@ def load_appointments() -> pd.DataFrame:
 
 def create_appointment(dato: date, tid: str, aftale: str, kategori: str) -> None:
     # Sender formularens felter til FastAPI som JSON.
-    payload = {
-        "dato": dato.isoformat(),
-        "tid": tid,
-        "aftale": aftale,
-        "kategori": kategori,
-    }
-    request = Request(
-        f"{API_BASE_URL}/appointments",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
-    with urlopen(request, timeout=3):
-        pass
+    send_json("/appointments", appointment_payload(dato, tid, aftale, kategori), "POST")
 
 
 def update_appointment(
@@ -62,35 +71,17 @@ def update_appointment(
     aftale: str,
     kategori: str,
 ) -> None:
-    payload = {
-        "dato": dato.isoformat(),
-        "tid": tid,
-        "aftale": aftale,
-        "kategori": kategori,
-    }
-    request = Request(
-        f"{API_BASE_URL}/appointments/{appointment_id}",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="PUT",
+    # Sender ændrede aftaledata til backend'en for den valgte aftales id.
+    send_json(
+        f"/appointments/{appointment_id}",
+        appointment_payload(dato, tid, aftale, kategori),
+        "PUT",
     )
-
-    with urlopen(request, timeout=3):
-        pass
 
 
 def create_appointment_with_ai(message: str) -> None:
     # Sender brugerens fritekst til backend'en, hvor OpenAI kaldes.
-    payload = {"besked": message}
-    request = Request(
-        f"{API_BASE_URL}/llm/appointments",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
-    with urlopen(request, timeout=20):
-        pass
+    send_json("/llm/appointments", {"besked": message}, "POST", timeout=20)
 
 
 @st.cache_data(ttl=10)
@@ -103,6 +94,7 @@ def load_numpy_analysis() -> dict:
 
 
 def delete_appointment(appointment_id: int) -> None:
+    # DELETE-kaldet behøver ingen JSON-body, kun id'et i URL'en.
     request = Request(
         f"{API_BASE_URL}/appointments/{appointment_id}",
         method="DELETE",
