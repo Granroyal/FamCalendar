@@ -88,10 +88,14 @@ Eksempel på besked i AI-assistenten:
 Tilføj tandlæge på fredag kl. 10
 ```
 
-## Tests
+## Kvalitetssikring
 
-Testene kan køres lokalt med:
+Projektet bruger pytest til tests, mypy til type checks og ruff til code analysis.
+
+Kør dem lokalt med uv:
 
 ```bash
 PYTHONPATH=. uv run --with pytest pytest
+uv run --with mypy mypy FamCalender tests
+uv run --with ruff ruff check .
 ```
