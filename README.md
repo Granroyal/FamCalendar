@@ -41,27 +41,9 @@ FAMCALENDAR_OPENAI_MODEL=gpt-5.4-nano
 
 Der ligger også en `.env.example`, som viser formatet.
 
-## Start programmet
+## Start programmet med Docker Compose
 
-Det nemmeste er at bruge `make`:
-
-```bash
-make backend
-make frontend
-```
-
-`make backend` starter backend'en, og `make frontend` starter Streamlit i en ny terminal.
-
-Hvis du hellere vil køre kommandoerne direkte, kan du også bruge:
-
-```bash
-uv run uvicorn FamCalender.backend.main:app --reload --port 8000
-uv run streamlit run FamCalender/frontend/streamlit.py
-```
-
-## Start med Docker Compose
-
-Hele applikationen kan også køres samlet med Docker Compose. Sørg først for at `.env` findes i
+Hele applikationen køres samlet med Docker Compose. Sørg først for at `.env` findes i
 projektets rodmappe:
 
 ```env
@@ -70,6 +52,12 @@ FAMCALENDAR_OPENAI_MODEL=gpt-5.4-nano
 ```
 
 Start derefter både backend og frontend med:
+
+```bash
+make up
+```
+
+Det svarer til:
 
 ```bash
 docker compose up --build
@@ -91,7 +79,7 @@ Docker Compose gemmer aftaler i en Docker-volume, så `appointments.json` bevare
 Stop services igen med:
 
 ```bash
-docker compose down
+make down
 ```
 
 Eksempel på besked i AI-assistenten:
@@ -102,21 +90,8 @@ Tilføj tandlæge på fredag kl. 10
 
 ## Tests
 
-Testene kan køres med:
+Testene kan køres lokalt med:
 
 ```bash
-make test
-```
-
-Type checks og code analysis kan køres med:
-
-```bash
-make typecheck
-make lint
-```
-
-Alle checks kan køres samlet med:
-
-```bash
-make check
+PYTHONPATH=. uv run --with pytest pytest
 ```
