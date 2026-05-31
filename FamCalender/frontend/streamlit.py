@@ -9,12 +9,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from FamCalender.frontend.analysis_view import render_numpy_analysis  # noqa: E402
 from FamCalender.frontend.api import load_appointments  # noqa: E402
 from FamCalender.frontend.calendar_view import render_calendar  # noqa: E402
-from FamCalender.frontend.charts import render_chart  # noqa: E402
-from FamCalender.frontend.dataframe_view import render_dataframe  # noqa: E402
 from FamCalender.frontend.forms import render_ai_assistant  # noqa: E402
+from FamCalender.frontend.matplotlib_view import render_chart  # noqa: E402
+from FamCalender.frontend.numpy_analysis_view import render_numpy_analysis  # noqa: E402
+from FamCalender.frontend.pandas_view import render_dataframe  # noqa: E402
 
 
 st.set_page_config(page_title="FamCalendar", layout="wide")
